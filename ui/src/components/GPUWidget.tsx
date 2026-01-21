@@ -30,10 +30,30 @@ export default function GPUWidget({ gpu }: GPUWidgetProps) {
         <div className="flex items-center space-x-2">
           <h2 className="font-semibold text-gray-100">{gpu.name}</h2>
           <span className="px-2 py-0.5 bg-gray-700 rounded-full text-xs text-gray-300"># {gpu.index}</span>
+          {gpu.type && (
+            <span className={`px-2 py-0.5 rounded-full text-xs ${
+              gpu.type === 'mps' ? 'bg-blue-700 text-blue-200' : 'bg-green-700 text-green-200'
+            }`}>
+              {gpu.type.toUpperCase()}
+            </span>
+          )}
         </div>
       </div>
 
       <div className="p-4 space-y-4">
+        {/* MPS-specific info */}
+        {gpu.type === 'mps' && gpu.model && (
+          <div className="bg-gray-800 rounded p-2 mb-2">
+            <p className="text-xs text-gray-400">Chip Model</p>
+            <p className="text-sm text-gray-200">{gpu.model}</p>
+            {gpu.cores && (
+              <p className="text-xs text-gray-400 mt-1">
+                GPU Cores: <span className="text-gray-200">{gpu.cores}</span>
+              </p>
+            )}
+          </div>
+        )}
+
         {/* Temperature, Fan, and Utilization Section */}
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">

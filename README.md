@@ -224,25 +224,116 @@ Requirements:
 
 
 **For NVIDIA GPUs (Linux):**
+
+> ⚠️ **Requires Python 3.10 or higher**
+
 ```bash
 git clone https://github.com/ostris/ai-toolkit.git
 cd ai-toolkit
 python3 -m venv venv
 source venv/bin/activate
 # install torch with CUDA support first
-pip3 install --no-cache-dir torch==2.7.0 torchvision==0.22.0 torchaudio==2.7.0 --index-url https://download.pytorch.org/whl/cu126
+pip3 install --no-cache-dir torch==2.9.1 torchvision==0.24.1 torchaudio==2.9.1 --index-url https://download.pytorch.org/whl/cu126
 pip3 install -r requirements.txt
 ```
 
 **For Apple Silicon Macs (M1/M2/M3/M4):**
+
+> ⚠️ **IMPORTANT:** 
+> - **Requires Python 3.10, 3.11, 3.12, or 3.13** (Python 3.14+ may have compatibility issues)
+> - **DO NOT use the CUDA commands above** - they will not work on Mac
+> - **DO NOT include `--index-url`** in the torch installation command
+> - Apple Silicon uses **MPS (Metal)**, not CUDA
+
 ```bash
 git clone https://github.com/ostris/ai-toolkit.git
 cd ai-toolkit
-python3 -m venv venv
+
+# If you have multiple Python versions, use the specific one:
+# Check available: python3.11 --version, python3.12 --version, python3.13 --version
+# Then create venv with that specific version:
+python3.11 -m venv venv
+
+# Activate the venv (MUST match the name you created above - "venv")
 source venv/bin/activate
-# install PyTorch with MPS support
-pip3 install --no-cache-dir torch==2.7.0 torchvision==0.22.0 torchaudio==2.7.0
-pip3 install -r requirements.txt
+
+# Verify you're using the correct Python version (should show 3.11, NOT 3.9 or 3.14)
+python --version
+
+# ⚠️ IMPORTANT: NO --index-url flag for Apple Silicon!
+pip install --no-cache-dir torch==2.9.1 torchvision==0.24.1 torchaudio==2.9.1
+pip install -r requirements.txt
+```
+
+### Quick Start After Installation (Apple Silicon)
+
+Once installation is complete, verify MPS is working:
+
+```bash
+# Test if MPS (Apple Silicon GPU) is available
+python -c "import torch; print('MPS Available:', torch.backends.mps.is_available())"
+# Should print: MPS Available: True
+```
+
+**Next Steps - Choose your workflow:**
+
+**Option 1: Use the Web UI (Easiest)**
+```bash
+# Make sure you're in the ai-toolkit directory
+cd ui
+npm install
+npm run build_and_start
+
+# Open browser to http://localhost:8675
+# The UI will guide you through configuration
+```
+
+**Option 2: Use Configuration Files (More Control)**
+
+1. **Copy an example config**:
+   ```bash
+   # For FLUX training (requires 24GB+ unified memory)
+   cp config/examples/train_lora_flux_24gb.yaml config/my_first_training.yml
+   ```
+
+2. **Edit the config for Apple Silicon**:
+   ```bash
+   # Open in your favorite editor
+   nano config/my_first_training.yml
+   # or: code config/my_first_training.yml
+   ```
+
+3. **Set device to `mps` in the config**:
+   ```yaml
+   job: extension
+   config:
+     name: my_first_flux_lora_v1
+     process:
+       - type: 'sd_trainer'
+         device: mps  # ← IMPORTANT: Set this to 'mps' for Apple Silicon
+         
+         # Apple Silicon optimized settings:
+         training:
+           batch_size: 1
+           gradient_accumulation_steps: 8
+           dtype: bfloat16
+   ```
+
+4. **Add your training images** to the folder specified in the config (default: `input/my_dataset/`)
+
+5. **Run training**:
+   ```bash
+   python run.py config/my_first_training.yml
+   ```
+
+**Option 3: Use Gradio UI**
+```bash
+# Login to HuggingFace first (for FLUX models)
+huggingface-cli login
+
+# Start the Gradio interface
+python flux_train_ui.py
+# Opens in browser automatically
 ```
 
 **Windows:**
@@ -253,13 +344,15 @@ Windows:
 
 If you are having issues with Windows. I recommend using the easy install script at [https://github.com/Tavris1/AI-Toolkit-Easy-Install](https://github.com/Tavris1/AI-Toolkit-Easy-Install)
 
+> ⚠️ **Requires Python 3.10 or higher**
+
 ```bash
 git clone https://github.com/ostris/ai-toolkit.git
 cd ai-toolkit
 python -m venv venv
 .\venv\Scripts\activate
 # install torch with CUDA support first
-pip install --no-cache-dir torch==2.7.0 torchvision==0.22.0 torchaudio==2.7.0 --index-url https://download.pytorch.org/whl/cu126
+pip install --no-cache-dir torch==2.9.1 torchvision==0.24.1 torchaudio==2.9.1 --index-url https://download.pytorch.org/whl/cu126
 pip install -r requirements.txt
 ```
 

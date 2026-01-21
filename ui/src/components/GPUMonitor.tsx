@@ -98,20 +98,24 @@ const GpuMonitor: React.FC = () => {
       );
     }
 
-    if (!gpuData.hasNvidiaSmi) {
-      return (
-        <div className="bg-yellow-900 border border-yellow-700 text-yellow-300 px-4 py-3 rounded relative" role="alert">
-          <strong className="font-bold">No NVIDIA GPUs detected!</strong>
-          <span className="block sm:inline"> nvidia-smi is not available on this system.</span>
-          {gpuData.error && <p className="mt-2 text-sm">{gpuData.error}</p>}
-        </div>
-      );
-    }
-
+    // Check if we have any GPUs at all
     if (gpuData.gpus.length === 0) {
+      // No GPUs detected
+      if (!gpuData.hasNvidiaSmi && !gpuData.hasMps) {
+        return (
+          <div className="bg-yellow-900 border border-yellow-700 text-yellow-300 px-4 py-3 rounded relative" role="alert">
+            <strong className="font-bold">No GPUs detected!</strong>
+            <span className="block sm:inline"> Neither NVIDIA GPUs (CUDA) nor Apple Silicon (MPS) detected.</span>
+            {gpuData.platform && <p className="mt-2 text-sm">Platform: {gpuData.platform}</p>}
+            {gpuData.error && <p className="mt-2 text-sm">{gpuData.error}</p>}
+          </div>
+        );
+      }
+      
+      // GPU API available but no GPUs found
       return (
         <div className="bg-yellow-900 border border-yellow-700 text-yellow-300 px-4 py-3 rounded relative" role="alert">
-          <span className="block sm:inline">No GPUs found, but nvidia-smi is available.</span>
+          <span className="block sm:inline">GPU monitoring available but no GPUs found.</span>
         </div>
       );
     }

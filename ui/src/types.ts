@@ -3,35 +3,38 @@
  */
 
 export interface GpuUtilization {
-  gpu: number;
-  memory: number;
+  gpu: number | string;
+  memory: number | string;
 }
 
 export interface GpuMemory {
-  total: number;
-  free: number;
-  used: number;
+  total: number | string;
+  free: number | string;
+  used: number | string;
 }
 
 export interface GpuPower {
-  draw: number;
-  limit: number;
+  draw: number | string;
+  limit: number | string;
 }
 
 export interface GpuClocks {
-  graphics: number;
-  memory: number;
+  graphics: number | string;
+  memory: number | string;
 }
 
 export interface GpuFan {
-  speed: number;
+  speed: number | string;
 }
 
 export interface GpuInfo {
   index: number;
   name: string;
-  driverVersion: string;
-  temperature: number;
+  type?: 'cuda' | 'mps';
+  model?: string;
+  cores?: number;
+  driverVersion?: string;
+  temperature: number | string;
   utilization: GpuUtilization;
   memory: GpuMemory;
   power: GpuPower;
@@ -51,6 +54,8 @@ export interface CpuInfo {
 
 export interface GPUApiResponse {
   hasNvidiaSmi: boolean;
+  hasMps: boolean;
+  platform: string;
   gpus: GpuInfo[];
   error?: string;
 }

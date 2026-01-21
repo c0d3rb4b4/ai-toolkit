@@ -148,6 +148,28 @@ async function getMpsInfo() {
     const totalMemoryBytes = parseInt(memInfo.trim());
     const totalMemoryGB = Math.round(totalMemoryBytes / (1024 * 1024 * 1024));
 
+    // Get current memory usage using vm_stat
+    let usedMemoryMB: number | string = 'N/A';
+    let freeMemoryMB: number | string = 'N/A';
+    
+    try {
+      const { stdout: vmStat } = await execAsync('vm_stat');
+      const pageSize = 4096; // macOS uses 4KB pages
+      
+      // Parse vm_stat output
+      const pagesActive = parseInt(vmStat.match(/Pages active:\s+(\d+)/)?.[1] || '0');
+      const pagesWired = parseInt(vmStat.match(/Pages wired down:\s+(\d+)/)?.[1] || '0');
+      const pagesInactive = parseInt(vmStat.match(/Pages inactive:\s+(\d+)/)?.[1] || '0');
+      const pagesFree = parseInt(vmStat.match(/Pages free:\s+(\d+)/)?.[1] || '0');
+      
+      // Calculate memory in MB
+      const usedPages = pagesActive + pagesWired + pagesInactive;
+      usedMemoryMB = Math.round((usedPages * pageSize) / (1024 * 1024));
+      freeMemoryMB = Math.round((pagesFree * pageSize) / (1024 * 1024));
+    } catch (vmStatError) {
+      console.error('Error getting memory stats:', vmStatError);
+    }
+
     // Get GPU cores info
     try {
       const { stdout: gpuCores } = await execAsync('system_profiler SPDisplaysDataType | grep "Total Number of Cores"');
@@ -156,17 +178,19 @@ async function getMpsInfo() {
       return {
         index: 0,
         name: 'Apple Silicon GPU',
-        type: 'mps',
+        type: 'mps' as const,
         model: stdout.trim(),
         cores: gpuCoreCount,
         memory: {
           total: totalMemoryGB * 1024, // Convert GB to MB for consistency with nvidia-smi
-          used: 'N/A',
-          free: 'N/A',
+          used: usedMemoryMB,
+          free: freeMemoryMB,
         },
         utilization: {
-          gpu: 'N/A',
-          memory: 'N/A',
+          gpu: 'N/A', // macOS doesn't provide GPU utilization easily
+          memory: typeof usedMemoryMB === 'number' && typeof totalMemoryGB === 'number'
+            ? Math.round((usedMemoryMB / (totalMemoryGB * 1024)) * 100)
+            : 'N/A',
         },
         temperature: 'N/A',
         power: {
@@ -186,16 +210,18 @@ async function getMpsInfo() {
       return {
         index: 0,
         name: 'Apple Silicon GPU',
-        type: 'mps',
+        type: 'mps' as const,
         model: stdout.trim(),
         memory: {
           total: totalMemoryGB * 1024,
-          used: 'N/A',
-          free: 'N/A',
+          used: usedMemoryMB,
+          free: freeMemoryMB,
         },
         utilization: {
           gpu: 'N/A',
-          memory: 'N/A',
+          memory: typeof usedMemoryMB === 'number' && typeof totalMemoryGB === 'number'
+            ? Math.round((usedMemoryMB / (totalMemoryGB * 1024)) * 100)
+            : 'N/A',
         },
         temperature: 'N/A',
         power: {
