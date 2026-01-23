@@ -170,6 +170,52 @@ async function getMpsInfo() {
       console.error('Error getting memory stats:', vmStatError);
     }
 
+    // Try to get GPU utilization using ioreg (works without sudo)
+    let gpuUtilization: number | string = 'N/A';
+    
+    try {
+      const { stdout: ioregOutput } = await execAsync('ioreg -r -d 1 -w 0 -c IOAccelerator');
+      
+      // Look for GPU utilization metrics in ioreg output
+      // Different Apple Silicon chips expose this differently
+      const utilMatch = ioregOutput.match(/"PerformanceStatistics"[^}]*"Device Utilization %"\s*=\s*(\d+)/);
+      if (utilMatch) {
+        gpuUtilization = parseInt(utilMatch[1]);
+      } else {
+        // Try alternative method: look for GPU busy/idle time
+        const busyMatch = ioregOutput.match(/"gpu-busy-time"\s*=\s*(\d+)/);
+        const idleMatch = ioregOutput.match(/"gpu-idle-time"\s*=\s*(\d+)/);
+        
+        if (busyMatch && idleMatch) {
+          const busyTime = parseInt(busyMatch[1]);
+          const idleTime = parseInt(idleMatch[1]);
+          const totalTime = busyTime + idleTime;
+          if (totalTime > 0) {
+            gpuUtilization = Math.round((busyTime / totalTime) * 100);
+          }
+        }
+      }
+    } catch (ioregError) {
+      // ioreg might not be available or format changed, keep as N/A
+      console.log('GPU utilization via ioreg not available:', ioregError instanceof Error ? ioregError.message : String(ioregError));
+    }
+
+    // Try powermetrics as fallback (requires sudo, but worth trying)
+    if (gpuUtilization === 'N/A') {
+      try {
+        const { stdout: powerMetrics } = await execAsync('sudo -n powermetrics --samplers gpu_power -i 500 -n 1 2>/dev/null', { timeout: 2000 });
+        
+        // Parse powermetrics output for GPU active residency
+        const activeMatch = powerMetrics.match(/GPU active residency:\s*(\d+(?:\.\d+)?)/);
+        if (activeMatch) {
+          gpuUtilization = Math.round(parseFloat(activeMatch[1]));
+        }
+      } catch (powerMetricsError) {
+        // powermetrics requires sudo, expected to fail unless configured
+        // This is fine, we'll just show N/A
+      }
+    }
+
     // Get GPU cores info
     try {
       const { stdout: gpuCores } = await execAsync('system_profiler SPDisplaysDataType | grep "Total Number of Cores"');
@@ -187,7 +233,7 @@ async function getMpsInfo() {
           free: freeMemoryMB,
         },
         utilization: {
-          gpu: 'N/A', // macOS doesn't provide GPU utilization easily
+          gpu: gpuUtilization,
           memory: typeof usedMemoryMB === 'number' && typeof totalMemoryGB === 'number'
             ? Math.round((usedMemoryMB / (totalMemoryGB * 1024)) * 100)
             : 'N/A',
@@ -218,7 +264,7 @@ async function getMpsInfo() {
           free: freeMemoryMB,
         },
         utilization: {
-          gpu: 'N/A',
+          gpu: gpuUtilization,
           memory: typeof usedMemoryMB === 'number' && typeof totalMemoryGB === 'number'
             ? Math.round((usedMemoryMB / (totalMemoryGB * 1024)) * 100)
             : 'N/A',
